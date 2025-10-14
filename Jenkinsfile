@@ -19,7 +19,6 @@ pipeline {
                 [key: 'commit_message', value: '$.head_commit.message']
             ],
             causeString: 'Push par $pusher_name sur $ref: "$commit_message"',
-            token: 'mysecret',
             printContributedVariables: true,
             printPostContent: true
         )

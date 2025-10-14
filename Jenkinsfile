@@ -20,6 +20,7 @@ pipeline {
             ],
             causeString: 'Push par $pusher_name sur $ref: "$commit_message"',
             printContributedVariables: true,
+            token: 'mysecret',
             printPostContent: true
         )
     }

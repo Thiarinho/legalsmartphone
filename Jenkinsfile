@@ -56,6 +56,35 @@ pipeline {
                 }
             }
         }
+        // Étape du pipeline dédiée à l'analyse SonarQube
+        stage('SonarQube Analysis') {
+            steps {
+                // Active l'environnement SonarQube configuré dans Jenkins
+                // "SonarQube_Local" est le nom que tu as défini dans "Manage Jenkins > Configure System"
+                withSonarQubeEnv('SonarQube_Local') { 
+                    script {
+                        // Récupère le chemin du sonarqube installé via "Global Tool Configuration"
+                        def scannerHome = tool 'sonarqube' 
+                        
+                        // Exécute la commande sonar-scanner pour analyser le code
+                        // Le scanner envoie les résultats au serveur SonarQube
+                        sh "${scannerHome}/bin/sonar-scanner"
+                    }
+                }
+            }
+        }
+
+        // Étape du pipeline qui vérifie le Quality Gate
+        stage('Quality Gate') {
+            steps {
+                // Définit un délai maximum de 3 minutes pour attendre la réponse de SonarQube
+                timeout(time: 2, unit: 'MINUTES') {
+                    // Attend le résultat du Quality Gate (succès ou échec)
+                    // Si le Quality Gate échoue, le pipeline est automatiquement interrompu (abortPipeline: true)
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
 
         stage('Build Docker Images') {
             steps {

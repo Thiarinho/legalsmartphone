@@ -1,15 +1,16 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 
 const SmartphoneCard = ({ smartphone, onEdit, onDelete }) => {
-  const prixReel = smartphone.prixPromotionnel || smartphone.prix;
-  const enPromotion = smartphone.enPromotion && smartphone.promotionPourcentage > 0;
+  const prixReel = smartphone.prixPromotionnel || smartphone.prix || 0;
+  const enPromotion = Boolean(smartphone.enPromotion) && (smartphone.promotionPourcentage || 0) > 0;
 
   return (
     <div className="smartphone-card">
       <div className="smartphone-image-container">
-        <img 
-          src={smartphone.image || '/placeholder-phone.png'} 
-          alt={`${smartphone.marque} ${smartphone.modele}`}
+        <img
+          src={smartphone.image || '/placeholder-phone.png'}
+          alt={`${smartphone.marque || 'Marque'} ${smartphone.modele || ''}`}
           className="smartphone-image"
           onError={(e) => {
             e.target.src = 'https://via.placeholder.com/300x300/cccccc/969696?text=📱+Image+Non+Disponible';
@@ -21,10 +22,10 @@ const SmartphoneCard = ({ smartphone, onEdit, onDelete }) => {
           </div>
         )}
         <div className="stock-badge">
-          {smartphone.stock > 0 ? `${smartphone.stock} en stock` : 'Rupture'}
+          {typeof smartphone.stock === 'number' && smartphone.stock > 0 ? `${smartphone.stock} en stock` : 'Rupture'}
         </div>
       </div>
-      
+
       <div className="smartphone-header">
         <div className="smartphone-title">
           <h3>{smartphone.marque} {smartphone.modele}</h3>
@@ -41,11 +42,11 @@ const SmartphoneCard = ({ smartphone, onEdit, onDelete }) => {
           )}
         </div>
       </div>
-      
+
       <div className="smartphone-specs">
         <div className="spec-item">
           <span className="spec-label">📱 Écran:</span>
-          <span className="spec-value">{smartphone.ecran.taille}" {smartphone.ecran.type}</span>
+          <span className="spec-value">{smartphone.ecran?.taille}" {smartphone.ecran?.type}</span>
         </div>
         <div className="spec-item">
           <span className="spec-label">💾 Mémoire:</span>
@@ -53,7 +54,7 @@ const SmartphoneCard = ({ smartphone, onEdit, onDelete }) => {
         </div>
         <div className="spec-item">
           <span className="spec-label">📸 Caméra:</span>
-          <span className="spec-value">{smartphone.camera.principale}MP + {smartphone.camera.frontale}MP</span>
+          <span className="spec-value">{smartphone.camera?.principale}MP + {smartphone.camera?.frontale}MP</span>
         </div>
         <div className="spec-item">
           <span className="spec-label">🔋 Batterie:</span>
@@ -64,16 +65,16 @@ const SmartphoneCard = ({ smartphone, onEdit, onDelete }) => {
           <span className="spec-value">{smartphone.processeur}</span>
         </div>
       </div>
-      
+
       <div className="smartphone-actions">
-        <button 
-          className="btn btn-edit" 
+        <button
+          className="btn btn-edit"
           onClick={() => onEdit(smartphone)}
         >
           ✏️ Modifier
         </button>
-        <button 
-          className="btn btn-danger" 
+        <button
+          className="btn btn-danger"
           onClick={() => onDelete(smartphone._id)}
         >
           🗑️ Supprimer
@@ -81,6 +82,42 @@ const SmartphoneCard = ({ smartphone, onEdit, onDelete }) => {
       </div>
     </div>
   );
+};
+
+SmartphoneCard.propTypes = {
+  smartphone: PropTypes.shape({
+    _id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    marque: PropTypes.string,
+    modele: PropTypes.string,
+    couleur: PropTypes.string,
+    os: PropTypes.string,
+    prix: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    prixPromotionnel: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    enPromotion: PropTypes.bool,
+    promotionPourcentage: PropTypes.number,
+    image: PropTypes.string,
+    stock: PropTypes.number,
+    ram: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    stockage: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    batterie: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    processeur: PropTypes.string,
+    ecran: PropTypes.shape({
+    taille: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    type: PropTypes.string,
+    }),
+    camera: PropTypes.shape({
+      principale: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+      frontale: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    }),
+  }).isRequired,
+  onEdit: PropTypes.func.isRequired,
+  onDelete: PropTypes.func.isRequired,
+};
+
+SmartphoneCard.defaultProps = {
+  // onEdit/onDelete sont required, mais on met quand même des defaults defensifs si besoin
+  onEdit: () => {},
+  onDelete: () => {},
 };
 
 export default SmartphoneCard;

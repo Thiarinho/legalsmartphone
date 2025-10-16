@@ -22,7 +22,9 @@ const SmartphoneCard = ({ smartphone, onEdit, onDelete }) => {
           </div>
         )}
         <div className="stock-badge">
-          {typeof smartphone.stock === 'number' && smartphone.stock > 0 ? `${smartphone.stock} en stock` : 'Rupture'}
+          {typeof smartphone.stock === 'number' && smartphone.stock > 0
+            ? `${smartphone.stock} en stock`
+            : 'Rupture'}
         </div>
       </div>
 
@@ -34,11 +36,11 @@ const SmartphoneCard = ({ smartphone, onEdit, onDelete }) => {
         <div className="smartphone-price">
           {enPromotion ? (
             <>
-              <span className="price-promotional">{prixReel.toFixed(0)}€</span>
-              <span className="price-original">{smartphone.prix}Fcfa</span>
+              <span className="price-promotional">{prixReel.toFixed(0)} Fcfa</span>
+              <span className="price-original">{smartphone.prix} Fcfa</span>
             </>
           ) : (
-            <span className="price-normal">{smartphone.prix}Fcfa</span>
+            <span className="price-normal">{smartphone.prix} Fcfa</span>
           )}
         </div>
       </div>
@@ -67,16 +69,10 @@ const SmartphoneCard = ({ smartphone, onEdit, onDelete }) => {
       </div>
 
       <div className="smartphone-actions">
-        <button
-          className="btn btn-edit"
-          onClick={() => onEdit(smartphone)}
-        >
+        <button className="btn btn-edit" onClick={() => onEdit(smartphone)}>
           ✏️ Modifier
         </button>
-        <button
-          className="btn btn-danger"
-          onClick={() => onDelete(smartphone._id)}
-        >
+        <button className="btn btn-danger" onClick={() => onDelete(smartphone._id)}>
           🗑️ Supprimer
         </button>
       </div>
@@ -84,6 +80,7 @@ const SmartphoneCard = ({ smartphone, onEdit, onDelete }) => {
   );
 };
 
+// ✅ Validation des props
 SmartphoneCard.propTypes = {
   smartphone: PropTypes.shape({
     _id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
@@ -102,8 +99,8 @@ SmartphoneCard.propTypes = {
     batterie: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
     processeur: PropTypes.string,
     ecran: PropTypes.shape({
-    taille: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-    type: PropTypes.string,
+      taille: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+      type: PropTypes.string,
     }),
     camera: PropTypes.shape({
       principale: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
@@ -114,8 +111,8 @@ SmartphoneCard.propTypes = {
   onDelete: PropTypes.func.isRequired,
 };
 
+// ✅ Default props (facultatif mais défensif)
 SmartphoneCard.defaultProps = {
-  // onEdit/onDelete sont required, mais on met quand même des defaults defensifs si besoin
   onEdit: () => {},
   onDelete: () => {},
 };

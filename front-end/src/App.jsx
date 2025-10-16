@@ -70,7 +70,7 @@ function App() {
 
   // Supprimer un smartphone
   const handleDelete = async (id) => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer ce smartphone ?')) {
+    if (globalThis.confirm('Êtes-vous sûr de vouloir supprimer ce smartphone ?')) {
       try {
         setError('');
         await smartphoneAPI.delete(id);

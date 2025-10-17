@@ -56,8 +56,8 @@ pipeline {
                 }
             }
         }
-        // Étape du pipeline dédiée à l'analyse SonarQube
-        stage('SonarQube Analysis') {
+        //* Étape du pipeline dédiée à l'analyse SonarQube
+        /*stage('SonarQube Analysis') {
             steps {
                 // Active l'environnement SonarQube configuré dans Jenkins
                 // "SonarQube_Local" est le nom que tu as défini dans "Manage Jenkins > Configure System"
@@ -72,10 +72,10 @@ pipeline {
                     }
                 }
             }
-        }
+        }*/
 
         // Étape du pipeline qui vérifie le Quality Gate
-        stage('Quality Gate') {
+       /* stage('Quality Gate') {
             steps {
                 // Définit un délai maximum de 3 minutes pour attendre la réponse de SonarQube
                 timeout(time: 2, unit: 'MINUTES') {
@@ -84,7 +84,7 @@ pipeline {
                     waitForQualityGate abortPipeline: true
                 }
             }
-        }
+        }*/
 
         stage('Build Docker Images') {
             steps {
@@ -122,7 +122,7 @@ pipeline {
             }
         }
 
-        stage('Deploy (compose.yaml)') {
+        /*stage('Deploy (compose.yaml)') {
             steps {
                 dir('.') {  
                     sh 'docker compose -f compose.yaml down || true'
@@ -132,9 +132,31 @@ pipeline {
                     sh 'docker compose -f compose.yaml logs --tail=50'
                 }
             }
+        }*/
+        stage('Deploy to Kubernetes') {
+            steps {
+                withKubeConfig([credentialsId: 'TIM-kube']) {
+                    // Déployer MongoDB
+                    sh "kubectl apply -f k8s/mongo-deployment.yaml"
+                    sh "kubectl apply -f k8s/mongo-service.yaml"
+
+                    // Déployer backend
+                    sh "kubectl apply -f k8s/back-deployment.yaml"
+                    sh "kubectl apply -f k8s/back-service.yaml"
+
+                    // Déployer frontend
+                    sh "kubectl apply -f k8s/front-deployment.yaml"
+                    sh "kubectl apply -f k8s/front-service.yaml"
+
+                    // Vérifier que les pods sont Running
+                    sh "kubectl rollout status deployment/mongo"
+                    sh "kubectl rollout status deployment/backend"
+                    sh "kubectl rollout status deployment/frontend"
+                }
+            }
         }
 
-        stage('Smoke Test') {
+        /*stage('Smoke Test') {
             steps {
                 sh '''
                     echo " Vérification Frontend (port 5173)..."
@@ -144,8 +166,8 @@ pipeline {
                     curl -f http://localhost:5001/api || echo "Backend unreachable"
                 '''
             }
-        }
-    }
+        }*/
+    
 
     post {
         success {

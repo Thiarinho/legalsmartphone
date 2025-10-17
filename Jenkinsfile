@@ -10,6 +10,7 @@ pipeline {
         FRONT_IMAGE = 'react-frontend'
         BACK_IMAGE  = 'express-backend'
     }
+
     triggers {
         // Pour que le pipeline démarre quand le webhook est reçu
         GenericTrigger(
@@ -56,35 +57,28 @@ pipeline {
                 }
             }
         }
-        //* Étape du pipeline dédiée à l'analyse SonarQube
-        /*stage('SonarQube Analysis') {
+
+        // stage SonarQube et Quality Gate (désactivés)
+        /*
+        stage('SonarQube Analysis') {
             steps {
-                // Active l'environnement SonarQube configuré dans Jenkins
-                // "SonarQube_Local" est le nom que tu as défini dans "Manage Jenkins > Configure System"
                 withSonarQubeEnv('SonarQube_Local') { 
                     script {
-                        // Récupère le chemin du sonarqube installé via "Global Tool Configuration"
                         def scannerHome = tool 'sonarqube' 
-                        
-                        // Exécute la commande sonar-scanner pour analyser le code
-                        // Le scanner envoie les résultats au serveur SonarQube
                         sh "${scannerHome}/bin/sonar-scanner"
                     }
                 }
             }
-        }*/
+        }
 
-        // Étape du pipeline qui vérifie le Quality Gate
-       /* stage('Quality Gate') {
+        stage('Quality Gate') {
             steps {
-                // Définit un délai maximum de 3 minutes pour attendre la réponse de SonarQube
                 timeout(time: 2, unit: 'MINUTES') {
-                    // Attend le résultat du Quality Gate (succès ou échec)
-                    // Si le Quality Gate échoue, le pipeline est automatiquement interrompu (abortPipeline: true)
                     waitForQualityGate abortPipeline: true
                 }
             }
-        }*/
+        }
+        */
 
         stage('Build Docker Images') {
             steps {
@@ -107,7 +101,6 @@ pipeline {
             }
         }
 
-        // on supprime les conteneur inactif dans docker container
         stage('Clean Docker') {
             steps {
                 sh 'docker container prune -f'
@@ -122,33 +115,16 @@ pipeline {
             }
         }
 
-        /*stage('Deploy (compose.yaml)') {
-            steps {
-                dir('.') {  
-                    sh 'docker compose -f compose.yaml down || true'
-                    sh 'docker compose -f compose.yaml pull'
-                    sh 'docker compose -f compose.yaml up -d'
-                    sh 'docker compose -f compose.yaml ps'
-                    sh 'docker compose -f compose.yaml logs --tail=50'
-                }
-            }
-        }*/
         stage('Deploy to Kubernetes') {
             steps {
                 withKubeConfig([credentialsId: 'TIM-kube']) {
-                    // Déployer MongoDB
                     sh "kubectl apply -f k8s/mongo-deployment.yaml"
                     sh "kubectl apply -f k8s/mongo-service.yaml"
-
-                    // Déployer backend
                     sh "kubectl apply -f k8s/back-deployment.yaml"
                     sh "kubectl apply -f k8s/back-service.yaml"
-
-                    // Déployer frontend
                     sh "kubectl apply -f k8s/front-deployment.yaml"
                     sh "kubectl apply -f k8s/front-service.yaml"
 
-                    // Vérifier que les pods sont Running
                     sh "kubectl rollout status deployment/mongo"
                     sh "kubectl rollout status deployment/backend"
                     sh "kubectl rollout status deployment/frontend"
@@ -156,7 +132,8 @@ pipeline {
             }
         }
 
-        /*stage('Smoke Test') {
+        /*
+        stage('Smoke Test') {
             steps {
                 sh '''
                     echo " Vérification Frontend (port 5173)..."
@@ -166,8 +143,9 @@ pipeline {
                     curl -f http://localhost:5001/api || echo "Backend unreachable"
                 '''
             }
-        }*/
-    
+        }
+        */
+    } // 👈 fermeture du bloc stages ajoutée ici ✅
 
     post {
         success {

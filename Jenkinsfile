@@ -113,7 +113,7 @@ pipeline {
                 sh 'docker --version'
                 sh 'docker-compose --version || echo "docker-compose non trouvé"'
             }
-        }/*
+        }
 
         stage('Deploy to Kubernetes') {
             steps {
@@ -130,7 +130,7 @@ pipeline {
                     sh "kubectl rollout status deployment/frontend"
                 }
             }
-        }*/
+        }
 
         /*
         stage('Smoke Test') {

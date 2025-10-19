@@ -117,7 +117,7 @@ pipeline {
 
         stage('Deploy to Kubernetes') {
             steps {
-                withKubeConfig([credentialsId: 'TIM-kube']) {
+                withKubeConfig([credentialsId: 'kubeconfig-jenkins']) {
                     sh "kubectl apply -f k8s/mongo-deployment.yaml"
                     sh "kubectl apply -f k8s/mongo-service.yaml"
                     sh "kubectl apply -f k8s/back-deployment.yaml"

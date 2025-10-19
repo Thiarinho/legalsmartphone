@@ -1,21 +1,21 @@
 apiVersion: v1
 clusters:
 - cluster:
-    certificate-authority: C:\Users\invite\.minikube\ca.crt
+    certificate-authority: /home/thierno/.minikube/ca.crt
     extensions:
     - extension:
-        last-update: Fri, 17 Oct 2025 12:10:32 GMT
+        last-update: Sun, 19 Oct 2025 17:51:59 GMT
         provider: minikube.sigs.k8s.io
         version: v1.37.0
       name: cluster_info
-    server: https://127.0.0.1:63814
+    server: https://192.168.58.2:8443
   name: minikube
 contexts:
 - context:
     cluster: minikube
     extensions:
     - extension:
-        last-update: Fri, 17 Oct 2025 12:10:32 GMT
+        last-update: Sun, 19 Oct 2025 17:51:59 GMT
         provider: minikube.sigs.k8s.io
         version: v1.37.0
       name: context_info
@@ -28,5 +28,5 @@ preferences: {}
 users:
 - name: minikube
   user:
-    client-certificate: C:\Users\invite\.minikube\profiles\minikube\client.crt
-    client-key: C:\Users\invite\.minikube\profiles\minikube\client.key
+    client-certificate: /home/thierno/.minikube/profiles/minikube/client.crt
+    client-key: /home/thierno/.minikube/profiles/minikube/client.key

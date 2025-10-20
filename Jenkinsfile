@@ -7,12 +7,12 @@ pipeline {
 
     environment {
         DOCKER_HUB_USER = 'thierno784'
-        FRONT_IMAGE = 'react-frontend'
-        BACK_IMAGE  = 'express-backend'
+        FRONT_IMAGE     = 'react-frontend'
+        BACK_IMAGE      = 'express-backend'
+        KUBECONFIG      = '/var/lib/jenkins/.kube/config' // accès Kubernetes pour Jenkins
     }
 
     triggers {
-        // Pour que le pipeline démarre quand le webhook est reçu
         GenericTrigger(
             genericVariables: [
                 [key: 'ref', value: '$.ref'],
@@ -33,18 +33,17 @@ pipeline {
             }
         }
 
-        stage('Install dependencies - Backend') {
-            steps {
-                dir('back-end') {
-                    sh 'npm install'
+        stage('Install dependencies') {
+            parallel {
+                stage('Backend') {
+                    steps {
+                        dir('back-end') { sh 'npm install' }
+                    }
                 }
-            }
-        }
-
-        stage('Install dependencies - Frontend') {
-            steps {
-                dir('front-end') {
-                    sh 'npm install'
+                stage('Frontend') {
+                    steps {
+                        dir('front-end') { sh 'npm install' }
+                    }
                 }
             }
         }
@@ -57,28 +56,6 @@ pipeline {
                 }
             }
         }
-
-        // stage SonarQube et Quality Gate (désactivés)
-        /*
-        stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv('SonarQube_Local') { 
-                    script {
-                        def scannerHome = tool 'sonarqube' 
-                        sh "${scannerHome}/bin/sonar-scanner"
-                    }
-                }
-            }
-        }
-
-        stage('Quality Gate') {
-            steps {
-                timeout(time: 2, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
-                }
-            }
-        }
-        */
 
         stage('Build Docker Images') {
             steps {
@@ -103,76 +80,65 @@ pipeline {
 
         stage('Clean Docker') {
             steps {
-                sh 'docker container prune -f'
-                sh 'docker image prune -f'
+                sh 'docker container prune -f && docker image prune -f'
             }
         }
 
         stage('Check Docker & Compose') {
             steps {
-                sh 'docker --version'
-                sh 'docker-compose --version || echo "docker-compose non trouvé"'
+                sh 'docker --version && docker-compose --version || echo "docker-compose non trouvé"'
             }
         }
-    environment {
-    UBECONFIG = '/var/lib/jenkins/.kube/config'
-    }
 
-     stages {
-        stage('Deploy to Minikube') {
+        stage('Deploy to Minikube / Kubernetes') {
             steps {
-                sh '''
-                    kubectl get nodes
-                    kubectl apply -f k8s/mongo-deployment.yaml
-                '''
-            }
-        }
-     }
+                script {
+                    // Déploiement MongoDB
+                    sh 'kubectl apply -f k8s/mongo-deployment.yaml'
+                    sh 'kubectl apply -f k8s/mongo-service.yaml'
+                    sh 'kubectl rollout status deployment/mongo'
 
-        stage('Deploy to Kubernetes') {
-            steps {
-                withKubeConfig([credentialsId: 'kubeconfig-jenkins']) {
-                    sh "kubectl apply -f k8s/mongo-deployment.yaml"
-                    sh "kubectl apply -f k8s/mongo-service.yaml"
-                    sh "kubectl apply -f k8s/back-deployment.yaml"
-                    sh "kubectl apply -f k8s/back-service.yaml"
-                    sh "kubectl apply -f k8s/front-deployment.yaml"
-                    sh "kubectl apply -f k8s/front-service.yaml"
+                    // Déploiement Backend
+                    sh 'kubectl apply -f k8s/back-deployment.yaml'
+                    sh 'kubectl apply -f k8s/back-service.yaml'
+                    sh 'kubectl rollout status deployment/backend'
 
-                    sh "kubectl rollout status deployment/mongo"
-                    sh "kubectl rollout status deployment/backend"
-                    sh "kubectl rollout status deployment/frontend"
+                    // Déploiement Frontend
+                    sh 'kubectl apply -f k8s/front-deployment.yaml'
+                    sh 'kubectl apply -f k8s/front-service.yaml'
+                    sh 'kubectl rollout status deployment/frontend'
+
+                    // Récupération des URL NodePort depuis Minikube
+                    FRONT_URL = sh(script: "minikube service front-service --url", returnStdout: true).trim()
+                    BACK_URL  = sh(script: "minikube service back-service --url", returnStdout: true).trim()
+                    echo "Frontend accessible sur : ${FRONT_URL}"
+                    echo "Backend accessible sur : ${BACK_URL}"
                 }
             }
         }
 
-        
         stage('Smoke Test') {
             steps {
-                sh '''
-                    echo " Vérification Frontend (port 5173)..."
-                    curl -f http://localhost:5173 || echo "Frontend unreachable"
-
-                    echo " Vérification Backend (port 5001)..."
-                    curl -f http://localhost:5001/api || echo "Backend unreachable"
-                '''
+                script {
+                    sh "curl -f ${FRONT_URL} || echo 'Frontend unreachable'"
+                    sh "curl -f ${BACK_URL}/api || echo 'Backend unreachable'"
+                }
             }
         }
-        
-    } // 👈 fermeture du bloc stages ajoutée ici ✅
+    }
 
     post {
         success {
             emailext(
                 subject: "Build SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                body: "Pipeline réussi\nDétails : ${env.BUILD_URL}",
+                body: "Pipeline réussi\nFrontend: ${FRONT_URL}\nBackend: ${BACK_URL}\nDétails: ${env.BUILD_URL}",
                 to: "thiernomane932@gmail.com"
             )
         }
         failure {
             emailext(
                 subject: "Build FAILED: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                body: "Le pipeline a échoué\nDétails : ${env.BUILD_URL}",
+                body: "Le pipeline a échoué\nDétails: ${env.BUILD_URL}",
                 to: "thiernomane932@gmail.com"
             )
         }

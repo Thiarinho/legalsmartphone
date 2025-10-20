@@ -1,29 +1,15 @@
 pipeline {
     agent any
 
-    tools {
-        nodejs "NodeJS_16"
-    }
+    tools { nodejs "NodeJS_16" }
 
     environment {
         DOCKER_HUB_USER = 'thierno784'
         FRONT_IMAGE     = 'react-frontend'
         BACK_IMAGE      = 'express-backend'
-        KUBECONFIG      = '/var/lib/jenkins/.kube/config' // accès Kubernetes pour Jenkins
-    }
-
-    triggers {
-        GenericTrigger(
-            genericVariables: [
-                [key: 'ref', value: '$.ref'],
-                [key: 'pusher_name', value: '$.pusher.name'],
-                [key: 'commit_message', value: '$.head_commit.message']
-            ],
-            causeString: 'Push par $pusher_name sur $ref: "$commit_message"',
-            token: 'mysecret',
-            printContributedVariables: true,
-            printPostContent: true
-        )
+        KUBECONFIG      = '/var/lib/jenkins/.kube/config'
+        FRONT_URL       = 'http://frontend.local'
+        BACK_URL        = 'http://backend.local'
     }
 
     stages {
@@ -36,14 +22,10 @@ pipeline {
         stage('Install dependencies') {
             parallel {
                 stage('Backend') {
-                    steps {
-                        dir('back-end') { sh 'npm install' }
-                    }
+                    steps { dir('statefull-app/full_stack_app/back-end') { sh 'npm install' } }
                 }
                 stage('Frontend') {
-                    steps {
-                        dir('front-end') { sh 'npm install' }
-                    }
+                    steps { dir('statefull-app/full_stack_app/front-end') { sh 'npm install' } }
                 }
             }
         }
@@ -51,8 +33,8 @@ pipeline {
         stage('Run Tests') {
             steps {
                 script {
-                    sh 'cd back-end && npm test || echo "Aucun test backend"'
-                    sh 'cd front-end && npm test || echo "Aucun test frontend"'
+                    sh 'cd statefull-app/full_stack_app/back-end && npm test || echo "Aucun test backend"'
+                    sh 'cd statefull-app/full_stack_app/front-end && npm test || echo "Aucun test frontend"'
                 }
             }
         }
@@ -60,8 +42,8 @@ pipeline {
         stage('Build Docker Images') {
             steps {
                 script {
-                    sh "docker build -t $DOCKER_HUB_USER/$FRONT_IMAGE:latest ./front-end"
-                    sh "docker build -t $DOCKER_HUB_USER/$BACK_IMAGE:latest ./back-end"
+                    sh "docker build -t $DOCKER_HUB_USER/$FRONT_IMAGE:latest statefull-app/full_stack_app/front-end"
+                    sh "docker build -t $DOCKER_HUB_USER/$BACK_IMAGE:latest statefull-app/full_stack_app/back-end"
                 }
             }
         }
@@ -78,41 +60,28 @@ pipeline {
             }
         }
 
-        stage('Clean Docker') {
+        stage('Deploy to Kubernetes with Ingress') {
             steps {
-                sh 'docker container prune -f && docker image prune -f'
-            }
-        }
+                dir('statefull-app/full_stack_app') {
+                    script {
+                        // MongoDB
+                        sh 'kubectl apply -f k8s/mongo-deployment.yaml'
+                        sh 'kubectl apply -f k8s/mongo-service.yaml'
+                        sh 'kubectl rollout status deployment/mongo'
 
-        stage('Check Docker & Compose') {
-            steps {
-                sh 'docker --version && docker-compose --version || echo "docker-compose non trouvé"'
-            }
-        }
+                        // Backend
+                        sh 'kubectl apply -f k8s/back-deployment.yaml'
+                        sh 'kubectl apply -f k8s/back-service.yaml'
+                        sh 'kubectl rollout status deployment/backend'
 
-        stage('Deploy to Minikube / Kubernetes') {
-            steps {
-                script {
-                    // Déploiement MongoDB
-                    sh 'kubectl apply -f k8s/mongo-deployment.yaml'
-                    sh 'kubectl apply -f k8s/mongo-service.yaml'
-                    sh 'kubectl rollout status deployment/mongo'
+                        // Frontend
+                        sh 'kubectl apply -f k8s/front-deployment.yaml'
+                        sh 'kubectl apply -f k8s/front-service.yaml'
+                        sh 'kubectl rollout status deployment/frontend'
 
-                    // Déploiement Backend
-                    sh 'kubectl apply -f k8s/back-deployment.yaml'
-                    sh 'kubectl apply -f k8s/back-service.yaml'
-                    sh 'kubectl rollout status deployment/backend'
-
-                    // Déploiement Frontend
-                    sh 'kubectl apply -f k8s/front-deployment.yaml'
-                    sh 'kubectl apply -f k8s/front-service.yaml'
-                    sh 'kubectl rollout status deployment/frontend'
-
-                    // Récupération des URL NodePort depuis Minikube
-                    FRONT_URL = sh(script: "minikube service front-service --url", returnStdout: true).trim()
-                    BACK_URL  = sh(script: "minikube service back-service --url", returnStdout: true).trim()
-                    echo "Frontend accessible sur : ${FRONT_URL}"
-                    echo "Backend accessible sur : ${BACK_URL}"
+                        // Ingress
+                        sh 'kubectl apply -f k8s/app-ingress.yaml'
+                    }
                 }
             }
         }
@@ -120,8 +89,8 @@ pipeline {
         stage('Smoke Test') {
             steps {
                 script {
-                    sh "curl -f ${FRONT_URL} || echo 'Frontend unreachable'"
-                    sh "curl -f ${BACK_URL}/api || echo 'Backend unreachable'"
+                    sh "curl -f $FRONT_URL || echo 'Frontend unreachable'"
+                    sh "curl -f $BACK_URL/api || echo 'Backend unreachable'"
                 }
             }
         }
@@ -131,7 +100,7 @@ pipeline {
         success {
             emailext(
                 subject: "Build SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                body: "Pipeline réussi\nFrontend: ${FRONT_URL}\nBackend: ${BACK_URL}\nDétails: ${env.BUILD_URL}",
+                body: "Pipeline réussi\nFrontend: ${env.FRONT_URL}\nBackend: ${env.BACK_URL}\nDétails: ${env.BUILD_URL}",
                 to: "thiernomane932@gmail.com"
             )
         }

@@ -114,11 +114,11 @@ pipeline {
                 sh 'docker-compose --version || echo "docker-compose non trouvé"'
             }
         }
-        environment {
-        KUBECONFIG = '/var/lib/jenkins/.kube/config'
+    environment {
+    UBECONFIG = '/var/lib/jenkins/.kube/config'
     }
 
-    stages {
+     stages {
         stage('Deploy to Minikube') {
             steps {
                 sh '''
@@ -127,7 +127,7 @@ pipeline {
                 '''
             }
         }
-    }
+     }
 
         stage('Deploy to Kubernetes') {
             steps {

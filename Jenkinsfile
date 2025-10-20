@@ -114,6 +114,20 @@ pipeline {
                 sh 'docker-compose --version || echo "docker-compose non trouvé"'
             }
         }
+        environment {
+        KUBECONFIG = '/var/lib/jenkins/.kube/config'
+    }
+
+    stages {
+        stage('Deploy to Minikube') {
+            steps {
+                sh '''
+                    kubectl get nodes
+                    kubectl apply -f k8s/mongo-deployment.yaml
+                '''
+            }
+        }
+    }
 
         stage('Deploy to Kubernetes') {
             steps {
@@ -132,7 +146,7 @@ pipeline {
             }
         }
 
-        /*
+        
         stage('Smoke Test') {
             steps {
                 sh '''
@@ -144,7 +158,7 @@ pipeline {
                 '''
             }
         }
-        */
+        
     } // 👈 fermeture du bloc stages ajoutée ici ✅
 
     post {

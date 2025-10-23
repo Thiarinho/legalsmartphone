@@ -22,10 +22,10 @@ pipeline {
         stage('Install dependencies') {
             parallel {
                 stage('Backend') {
-                    steps { dir('statefull-app/full_stack_app/back-end') { sh 'npm install' } }
+                    steps { dir('legalsmartphone/back-end') { sh 'npm install' } }
                 }
                 stage('Frontend') {
-                    steps { dir('statefull-app/full_stack_app/front-end') { sh 'npm install' } }
+                    steps { dir('legalsmartphone/front-end') { sh 'npm install' } }
                 }
             }
         }
